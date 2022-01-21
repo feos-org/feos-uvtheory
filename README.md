@@ -1,6 +1,6 @@
 # FeOs - uv-theory
 
-Implementation of the uv-theory[^vanwesten2021][^vanwesten2021] within the FeOs project. This project contains a Rust implementation as well as bindings to Python.
+Implementation of the uv-theory[^vanwesten2021] within the FeOs project. This project contains a Rust implementation as well as bindings to Python.
 
 > The uv-theory leads to an accurate description of Mie fluids, Mie chain fluids, and mixtures.
 
