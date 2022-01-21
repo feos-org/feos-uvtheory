@@ -1,0 +1,37 @@
+[package]
+name = "feos-uvtheory"
+version = "0.1.0"
+authors = [
+    "Anja Reimer <anja.reimer@itt.uni-stuttgart.de>",
+    "Gernot Bauer <bauer@itt.uni-stuttgart.de>",
+    "Philipp Rehner <prehner@ethz.ch>"
+]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Implementation of PC-SAFT EoS and corresponding Helmholtz energy functional."
+homepage = "https://github.com/feos-org"
+readme = "README.md"
+repository = "https://github.com/feos-org/feos-uvtheory"
+keywords = ["physics", "thermodynamics", "equations_of_state", "phase_equilibria", "uv_theory", "virial_coefficient"]
+categories = ["science"]
+exclude = ["/.github/*", "*.ipynb", "/examples/*", "/parameters/*"]
+
+[dependencies]
+quantity = "0.4"
+feos-core = "0.1"
+num-dual = "0.4"
+ndarray = "0.15"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+lazy_static = "1.4"
+approx = "0.5"
+itertools = "0.10.1"
+numpy = { version = "0.15", optional = true }
+pyo3 = { version = "0.15", optional = true }
+
+[dev-dependencies]
+approx = "0.4"
+
+[features]
+default = []
+python = ["pyo3", "quantity/python", "feos-core/python", "numpy"]
