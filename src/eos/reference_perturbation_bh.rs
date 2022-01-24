@@ -3,7 +3,6 @@ use super::hard_sphere_bh::{
 };
 use crate::parameters::*;
 use feos_core::{HelmholtzEnergyDual, StateHD};
-use itertools::Itertools;
 use num_dual::DualNum;
 use std::fmt;
 use std::{f64::consts::PI, rc::Rc};
@@ -44,44 +43,18 @@ impl<D: DualNum<f64>> HelmholtzEnergyDual<D> for ReferencePerturbationBH {
     }
 }
 
-/// Boltzmann factor of the Mie potential.
-///
-/// m: repulsive exponent
-/// reduced_temperature: T / epsilon_k
-/// reduced_separation: r / sigma
-fn boltzmann_factor<D: DualNum<f64>>(m: f64, reduced_temperature: D, reduced_separation: D) -> D {
-    (-reduced_temperature.recip()
-        * mie_prefactor(m, 6.0)
-        * (reduced_separation.powf(-m) - reduced_separation.powf(-6.0)))
-    .exp()
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::parameters::utils::{methane_parameters, test_parameters};
+    use crate::parameters::utils::test_parameters;
     use approx::assert_relative_eq;
-    use ndarray::{arr1, Array1};
-
-    fn state_from_reduced<D: DualNum<f64>>(
-        reduced_temperature: D,
-        reduced_density: D,
-        moles: &Array1<D>,
-        sigma: f64,
-        epsilon_k: f64,
-    ) -> StateHD<D> {
-        let temperature = reduced_temperature * epsilon_k;
-        let reduced_volume = moles.sum() / reduced_density;
-        let volume = reduced_volume * sigma.powi(3);
-        StateHD::new(temperature, volume, moles.clone())
-    }
+    use ndarray::arr1;
 
     #[test]
     fn test_delta_a0_bh() {
         let moles = arr1(&[2.0]);
 
         // m = 12.0, t = 4.0, rho = 1.0
-        let sigma = 2.0;
         let reduced_temperature = 4.0;
         let reduced_density = 1.0;
         let reduced_volume = moles[0] / reduced_density;

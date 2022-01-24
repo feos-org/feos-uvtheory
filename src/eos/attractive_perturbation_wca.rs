@@ -99,11 +99,8 @@ impl<D: DualNum<f64>> HelmholtzEnergyDual<D> for AttractivePerturbationWCA {
         let delta_a1u = state.partial_density.sum() / t_x * i_wca * 2.0 * PI * weighted_sigma3_ij;
 
         //                 state.partial_density.sum() / t_x * i_wca * 2.0 * PI * weighted_sigma3_ij;
-        let u_fraction_wca = u_fraction_wca(
-            rep_x,
-            density * (x * &p.sigma.mapv(|s| s.powi(3))).sum(),
-            t_x.recip(),
-        );
+        let u_fraction_wca =
+            u_fraction_wca(rep_x, density * (x * &p.sigma.mapv(|s| s.powi(3))).sum());
 
         let b21u = delta_b12u(t_x, mean_field_constant_x, weighted_sigma3_ij, q_x, rm_x);
         let b2bar = residual_virial_coefficient(p, x, state.temperature);
@@ -157,7 +154,7 @@ fn correlation_integral_wca<D: DualNum<f64>>(
     q_x: D,
     rm_x: D,
 ) -> D {
-    let c = coefficients_WCA(rep_x, att_x, d_x);
+    let c = coefficients_wca(rep_x, att_x, d_x);
     (q_x.powi(3) - rm_x.powi(3)) * 1.0 / 3.0 - mean_field_constant_x
         + mie_prefactor(rep_x, att_x) * (c[0] * rho_x + c[1] * rho_x.powi(2) + c[2] * rho_x.powi(3))
             / (c[3] * rho_x + c[4] * rho_x.powi(2) + c[5] * rho_x.powi(3) + 1.0)
@@ -165,7 +162,7 @@ fn correlation_integral_wca<D: DualNum<f64>>(
 
 /// U-fraction according to Barker-Henderson division.
 /// Eq. 15
-fn u_fraction_wca<D: DualNum<f64>>(rep_x: D, reduced_density: D, one_fluid_beta: D) -> D {
+fn u_fraction_wca<D: DualNum<f64>>(rep_x: D, reduced_density: D) -> D {
     (reduced_density * CU_WCA[0]
         + reduced_density.powi(2) * (rep_x.recip() * CU_WCA[2] + CU_WCA[1]))
         .tanh()
@@ -205,7 +202,7 @@ fn one_fluid_properties<D: DualNum<f64>>(
     )
 }
 // Coefficients for IWCA from eq. (S55)
-fn coefficients_WCA<D: DualNum<f64>>(rep: D, att: D, d: D) -> [D; 6] {
+fn coefficients_wca<D: DualNum<f64>>(rep: D, att: D, d: D) -> [D; 6] {
     let rep_inv = rep.recip();
     let rs_x = (rep / att).powd((rep - att).recip());
     let tau_x = -d + rs_x;
@@ -322,7 +319,6 @@ mod test {
         let u_fraction_wca = u_fraction_wca(
             rep_x,
             state.partial_density.sum() * (x * &p.sigma.mapv(|s| s.powi(3))).sum(),
-            t_x.recip(),
         );
 
         let b2bar = residual_virial_coefficient(&p, x, state.temperature) / p.sigma[0].powi(3);

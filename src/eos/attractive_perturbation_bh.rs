@@ -208,7 +208,7 @@ fn y_eff<D: DualNum<f64>>(reduced_temperature: D, rep: f64, att: f64) -> D {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::parameters::utils::{methane_parameters, test_parameters};
+    use crate::parameters::utils::methane_parameters;
     use approx::assert_relative_eq;
     use ndarray::arr1;
 
@@ -266,8 +266,8 @@ mod test {
         );
         //assert!(b2bar.re() ==-1.00533412744652);
 
-        let a_test = state.moles.sum()
-            * (delta_a1u + (-u_fraction_bh + 1.0) * (b2bar - b21u) * state.partial_density.sum());
+        //let a_test = state.moles.sum()
+        //  * (delta_a1u + (-u_fraction_bh + 1.0) * (b2bar - b21u) * state.partial_density.sum());
         let a = pt.helmholtz_energy(&state) / moles[0];
         dbg!(a.re());
         //assert!(-1.16124062615291 == a.re())
