@@ -19,7 +19,7 @@ lazy_static! {
         [-2.905719617, -1.778798984, -1.556827067, -4.308085347],
         [0.429154871, 20.765871545, 9.341250676, -33.787719418],
     ]);
-    static ref WCA_CONSTANTS_q: Array2<f64> = arr2(&[
+    static ref WCA_CONSTANTS_Q: Array2<f64> = arr2(&[
         [1.92840364363978, 4.43165896265079E-01, 0.0, 0.0],
         [
             5.20120816141761E-01,
@@ -68,7 +68,7 @@ pub fn diameter_wca<D: DualNum<f64>>(parameters: &UVParameters, temperature: D) 
         .sigma
         .iter()
         .enumerate()
-        .map(|(i, c)| {
+        .map(|(i, _b)| {
             let t = temperature / parameters.epsilon_k[i];
             let rm = (parameters.rep[i] / parameters.att[i])
                 .powf(1.0 / (parameters.rep[i] - parameters.att[i]));
@@ -87,22 +87,22 @@ pub fn diameter_q_wca<D: DualNum<f64>>(parameters: &UVParameters, temperature: D
         .sigma
         .iter()
         .enumerate()
-        .map(|(i, c)| {
+        .map(|(i, _c)| {
             let nu = parameters.rep[i];
             let n = parameters.att[i];
             let t = temperature / parameters.epsilon_k[i];
             let rs = (nu / n).powf(1.0 / (nu - n));
             let coeffs = arr1(&[
                 (nu * 2.0 * PI / n).sqrt(),
-                WCA_CONSTANTS_q[[0, 0]] + WCA_CONSTANTS_q[[0, 1]] * (nu - 7.0),
-                WCA_CONSTANTS_q[[1, 0]]
-                    + WCA_CONSTANTS_q[[1, 1]] * (nu - 7.0)
-                    + WCA_CONSTANTS_q[[1, 2]] * (nu - 7.0).powi(2)
-                    + WCA_CONSTANTS_q[[1, 3]] * (nu - 7.0).powi(3),
-                WCA_CONSTANTS_q[[2, 0]]
-                    + WCA_CONSTANTS_q[[2, 1]] * (nu - 7.0)
-                    + WCA_CONSTANTS_q[[2, 2]] * (nu - 7.0).powi(2)
-                    + WCA_CONSTANTS_q[[2, 3]] * (nu - 7.0).powi(3),
+                WCA_CONSTANTS_Q[[0, 0]] + WCA_CONSTANTS_Q[[0, 1]] * (nu - 7.0),
+                WCA_CONSTANTS_Q[[1, 0]]
+                    + WCA_CONSTANTS_Q[[1, 1]] * (nu - 7.0)
+                    + WCA_CONSTANTS_Q[[1, 2]] * (nu - 7.0).powi(2)
+                    + WCA_CONSTANTS_Q[[1, 3]] * (nu - 7.0).powi(3),
+                WCA_CONSTANTS_Q[[2, 0]]
+                    + WCA_CONSTANTS_Q[[2, 1]] * (nu - 7.0)
+                    + WCA_CONSTANTS_Q[[2, 2]] * (nu - 7.0).powi(2)
+                    + WCA_CONSTANTS_Q[[2, 3]] * (nu - 7.0).powi(3),
             ]);
             (t.powf(2.0) * coeffs[3]
                 + t.powf(3.0 / 2.0) * coeffs[2]
@@ -152,7 +152,7 @@ pub fn dimensionless_length_scale<D: DualNum<f64>>(
         .sigma
         .iter()
         .enumerate()
-        .map(|(i, c)| {
+        .map(|(i, _c)| {
             let rs = (parameters.rep[i] / parameters.att[i])
                 .powf(1.0 / (parameters.rep[i] - parameters.att[i]));
             -diameter_wca(parameters, temperature)[i] / parameters.sigma[i] + rs
@@ -162,7 +162,6 @@ pub fn dimensionless_length_scale<D: DualNum<f64>>(
 
 pub fn packing_fraction_b<D: DualNum<f64>>(
     parameters: &UVParameters,
-    diameter: &Array1<D>,
     eta: D,
     temperature: D,
 ) -> Array2<D> {
@@ -182,7 +181,6 @@ pub fn packing_fraction_b<D: DualNum<f64>>(
 
 pub fn packing_fraction_a<D: DualNum<f64>>(
     parameters: &UVParameters,
-    diameter: &Array1<D>,
     eta: D,
     temperature: D,
 ) -> Array2<D> {

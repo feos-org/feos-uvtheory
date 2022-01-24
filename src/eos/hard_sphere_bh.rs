@@ -148,7 +148,6 @@ pub fn packing_fraction_a<D: DualNum<f64>>(
 mod test {
     use super::*;
     use crate::parameters::utils::{methane_parameters, test_parameters};
-    use approx::assert_relative_eq;
 
     #[test]
     fn test_bh_diameter() {
