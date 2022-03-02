@@ -39,6 +39,7 @@ impl<D: DualNum<f64>> HelmholtzEnergyDual<D> for ReferencePerturbationBH {
                     * (-d_ij.powi(3) + p.sigma_ij[[i, j]].powi(3))
             }
         }
+
         -a * state.moles.sum().powi(2) * 2.0 / 3.0 / state.volume * PI
     }
 }

@@ -233,6 +233,8 @@ fn bh_coefficients(rep: f64, att: f64) -> Array1<f64> {
 }
 
 pub mod utils {
+    use std::f64;
+
     use feos_core::parameter::{Identifier, PureRecord};
 
     use super::*;
@@ -244,6 +246,23 @@ pub mod utils {
         UVParameters::new_pure(pr)
     }
 
+    pub fn test_parameters_mixture(
+        rep: Array1<f64>,
+        att: Array1<f64>,
+        sigma: Array1<f64>,
+        epsilon: Array1<f64>,
+    ) -> UVParameters {
+        let identifier = Identifier::new("1", None, None, None, None, None);
+        let model_record = UVRecord::new(rep[0], att[0], sigma[0], epsilon[0]);
+        let pr1 = PureRecord::new(identifier, 1.0, model_record, None);
+        //
+        let identifier2 = Identifier::new("2", None, None, None, None, None);
+        let model_record2 = UVRecord::new(rep[1], att[1], sigma[1], epsilon[1]);
+        let pr2 = PureRecord::new(identifier2, 1.0, model_record2, None);
+        let pure_records = vec![pr1, pr2];
+        UVParameters::new_binary(pure_records, None)
+    }
+
     pub fn methane_parameters(rep: f64, att: f64) -> UVParameters {
         let identifier = Identifier::new("1", None, None, None, None, None);
         let model_record = UVRecord::new(rep, att, 3.7039, 150.03);
@@ -252,13 +271,13 @@ pub mod utils {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
+// #[cfg(test)]
+// mod test {
+//     use super::*;
 
-    #[test]
-    fn test_mie_prefactor() {
-        let p = mie_prefactor(12.0, 6.0);
-        assert_eq!(p, 4.0);
-    }
-}
+//     #[test]
+//     fn test_mie_prefactor() {
+//         let p = mie_prefactor(12.0, 6.0);
+//         assert_eq!(p, 4.0);
+//     }
+// }
