@@ -170,7 +170,7 @@ mod test {
 
     #[test]
     fn helmholtz_energy_mixtures_bh() {
-        // LJ mixture
+        // Mixture of equal components --> result must be the same as fpr pure fluid ///
         // component 1
         let rep1 = 24.0;
         let eps_k1 = 150.03;
@@ -216,7 +216,7 @@ mod test {
         assert_relative_eq!(a_bh, 2.993577305779432, max_relative = 1e-12);
     }
     #[test]
-    fn helmholtz_energy_mixtures_wca_1() {
+    fn helmholtz_energy_mixtures_wca() {
         // Mixture of equal components --> result must be the same as fpr pure fluid ///
         // component 1
         let rep1 = 24.0;
@@ -228,48 +228,6 @@ mod test {
         let rep2 = 24.0;
         let eps_k2 = 150.03;
         let sig2 = 3.7039;
-        let r2 = UVRecord::new(rep2, 6.0, sig2, eps_k2);
-        let j = Identifier::new("2", None, None, None, None, None);
-        //////////////
-
-        let pr1 = PureRecord::new(i, 1.0, r1, None);
-        let pr2 = PureRecord::new(j, 1.0, r2, None);
-        let pure_records = vec![pr1, pr2];
-        let uv_parameters = UVParameters::new_binary(pure_records, None);
-        // state
-        let reduced_temperature = 4.0;
-        let eps_k_x = (eps_k1 + eps_k2) / 2.0; // Check rule!!
-        let t_x = reduced_temperature * eps_k_x * KELVIN;
-        let sig_x = (sig1 + sig2) / 2.0; // Check rule!!
-        let reduced_density = 1.0;
-        let moles = arr1(&vec![1.7, 0.3]) * MOL;
-        let total_moles = moles.sum();
-        let volume = (sig_x * ANGSTROM).powi(3) / reduced_density * NAV * total_moles;
-
-        // EoS
-        let eos_wca = Rc::new(UVTheory::new(Rc::new(uv_parameters)));
-        let state_wca = State::new_nvt(&eos_wca, t_x, volume, &moles).unwrap();
-        let a_wca = state_wca
-            .molar_helmholtz_energy(Contributions::Residual)
-            .to_reduced(RGAS * t_x)
-            .unwrap();
-
-        assert_relative_eq!(a_wca, 2.972986567516, max_relative = 1e-12)
-    }
-    #[test]
-    /// Test real mixture ////
-    fn helmholtz_energy_mixtures_wca_2() {
-        // Mixture of equal components --> result must be the same as fpr pure fluid ///
-        // component 1
-        let rep1 = 12.0;
-        let eps_k1 = 1.0;
-        let sig1 = 1.0;
-        let r1 = UVRecord::new(rep1, 6.0, sig1, eps_k1);
-        let i = Identifier::new("1", None, None, None, None, None);
-        // compontent 2
-        let rep2 = 24.0;
-        let eps_k2 = 2.0;
-        let sig2 = 2.0;
         let r2 = UVRecord::new(rep2, 6.0, sig2, eps_k2);
         let j = Identifier::new("2", None, None, None, None, None);
         //////////////
