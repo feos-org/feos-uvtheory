@@ -19,7 +19,7 @@ lazy_static! {
         [-2.905719617, -1.778798984, -1.556827067, -4.308085347],
         [0.429154871, 20.765871545, 9.341250676, -33.787719418],
     ]);
-    static ref WCA_CONSTANTS_Q: Array2<f64> = arr2(&[
+    pub static ref WCA_CONSTANTS_Q: Array2<f64> = arr2(&[
         [1.92840364363978, 4.43165896265079E-01, 0.0, 0.0],
         [
             5.20120816141761E-01,
@@ -82,38 +82,67 @@ pub fn diameter_wca<D: DualNum<f64>>(parameters: &UVParameters, temperature: D) 
 }
 
 // Hard sphere diameter q for WCA division from eq. (S28)
-pub fn diameter_q_wca<D: DualNum<f64>>(parameters: &UVParameters, temperature: D) -> Array1<D> {
-    parameters
-        .sigma
-        .iter()
-        .enumerate()
-        .map(|(i, _c)| {
-            let nu = parameters.rep[i];
-            let n = parameters.att[i];
-            let t = temperature / parameters.epsilon_k[i];
-            let rs = (nu / n).powf(1.0 / (nu - n));
-            let coeffs = arr1(&[
-                (nu * 2.0 * PI / n).sqrt(),
-                WCA_CONSTANTS_Q[[0, 0]] + WCA_CONSTANTS_Q[[0, 1]] * (nu - 7.0),
-                WCA_CONSTANTS_Q[[1, 0]]
-                    + WCA_CONSTANTS_Q[[1, 1]] * (nu - 7.0)
-                    + WCA_CONSTANTS_Q[[1, 2]] * (nu - 7.0).powi(2)
-                    + WCA_CONSTANTS_Q[[1, 3]] * (nu - 7.0).powi(3),
-                WCA_CONSTANTS_Q[[2, 0]]
-                    + WCA_CONSTANTS_Q[[2, 1]] * (nu - 7.0)
-                    + WCA_CONSTANTS_Q[[2, 2]] * (nu - 7.0).powi(2)
-                    + WCA_CONSTANTS_Q[[2, 3]] * (nu - 7.0).powi(3),
-            ]);
-            (t.powf(2.0) * coeffs[3]
-                + t.powf(3.0 / 2.0) * coeffs[2]
-                + t * coeffs[1]
-                + t.powf(1.0 / 2.0) * coeffs[0]
-                + 1.0)
-                .powf(-1.0 / (2.0 * nu))
-                * rs
-                * parameters.sigma[i]
-        })
-        .collect()
+// pub fn diameter_q_wca<D: DualNum<f64>>(parameters: &UVParameters, temperature: D) -> Array1<D> {
+//     parameters
+//         .sigma
+//         .iter()
+//         .enumerate()
+//         .map(|(i, _c)| {
+//             let nu = parameters.rep[i];
+//             let n = parameters.att[i];
+//             let t = temperature / parameters.epsilon_k[i];
+//             let rs = (nu / n).powf(1.0 / (nu - n));
+//             let coeffs = arr1(&[
+//                 (nu * 2.0 * PI / n).sqrt(),
+//                 WCA_CONSTANTS_Q[[0, 0]] + WCA_CONSTANTS_Q[[0, 1]] * (nu - 7.0),
+//                 WCA_CONSTANTS_Q[[1, 0]]
+//                     + WCA_CONSTANTS_Q[[1, 1]] * (nu - 7.0)
+//                     + WCA_CONSTANTS_Q[[1, 2]] * (nu - 7.0).powi(2)
+//                     + WCA_CONSTANTS_Q[[1, 3]] * (nu - 7.0).powi(3),
+//                 WCA_CONSTANTS_Q[[2, 0]]
+//                     + WCA_CONSTANTS_Q[[2, 1]] * (nu - 7.0)
+//                     + WCA_CONSTANTS_Q[[2, 2]] * (nu - 7.0).powi(2)
+//                     + WCA_CONSTANTS_Q[[2, 3]] * (nu - 7.0).powi(3),
+//             ]);
+
+//             (t.powf(2.0) * coeffs[3]
+//                 + t.powf(3.0 / 2.0) * coeffs[2]
+//                 + t * coeffs[1]
+//                 + t.powf(1.0 / 2.0) * coeffs[0]
+//                 + 1.0)
+//                 .powf(-1.0 / (2.0 * nu))
+//                 * rs
+//                 * parameters.sigma[i]
+//         })
+//         .collect()
+// }
+
+//
+
+pub fn dimensionless_diameter_q_wca<D: DualNum<f64>>(t_x: D, rep_x: D, att_x: D) -> D {
+    let nu = rep_x;
+    let n = att_x;
+    let rs = (nu / n).powd((nu - n).recip());
+    let coeffs = arr1(&[
+        (nu * 2.0 * PI / n).sqrt(),
+        (nu - 7.0) * WCA_CONSTANTS_Q[[0, 1]] + WCA_CONSTANTS_Q[[0, 0]],
+        (nu - 7.0) * WCA_CONSTANTS_Q[[1, 1]]
+            + (nu - 7.0).powi(2) * WCA_CONSTANTS_Q[[1, 2]]
+            + (nu - 7.0).powi(3) * WCA_CONSTANTS_Q[[1, 3]]
+            + WCA_CONSTANTS_Q[[1, 0]],
+        (nu - 7.0) * WCA_CONSTANTS_Q[[2, 1]]
+            + (nu - 7.0).powi(2) * WCA_CONSTANTS_Q[[2, 2]]
+            + (nu - 7.0).powi(3) * WCA_CONSTANTS_Q[[2, 3]]
+            + WCA_CONSTANTS_Q[[2, 0]],
+    ]);
+
+    (t_x.powf(2.0) * coeffs[3]
+        + t_x.powf(3.0 / 2.0) * coeffs[2]
+        + t_x * coeffs[1]
+        + t_x.powf(1.0 / 2.0) * coeffs[0]
+        + 1.0)
+        .powd(-(nu * 2.0).recip())
+        * rs
 }
 
 pub fn zeta<D: DualNum<f64>>(partial_density: &Array1<D>, diameter: &Array1<D>) -> [D; 4] {
@@ -207,7 +236,7 @@ pub fn packing_fraction_a<D: DualNum<f64>>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::parameters::utils::{methane_parameters, test_parameters};
+    use crate::parameters::utils::{methane_parameters, test_parameters, test_parameters_mixture};
     use approx::assert_relative_eq;
     #[test]
     fn test_wca_diameter() {
@@ -223,7 +252,7 @@ mod test {
             0.9614325601663462
         );
         assert_relative_eq!(
-            diameter_q_wca(&p, 4.0 * p.epsilon_k[0])[0] / p.sigma[0],
+            dimensionless_diameter_q_wca(temp, p.rep[0], p.att[0]),
             0.9751576149023506,
             epsilon = 1e-8
         );
@@ -233,5 +262,27 @@ mod test {
             0.11862717872596029,
             epsilon = 1e-8
         );
+    }
+
+    #[test]
+    fn test_hard_sphere_wca_mixture() {
+        let moles = arr1(&[0.40000000000000002, 0.59999999999999998]);
+        let reduced_temperature = 1.0;
+        let reduced_density = 0.90000000000000002;
+        let reduced_volume = (moles[0] + moles[1]) / reduced_density;
+
+        let p = test_parameters_mixture(
+            arr1(&[12.0, 12.0]),
+            arr1(&[6.0, 6.0]),
+            arr1(&[1.0, 1.0]),
+            arr1(&[1.0, 0.5]),
+        );
+
+        let pt = HardSphereWCA {
+            parameters: Rc::new(p),
+        };
+        let state = StateHD::new(reduced_temperature, reduced_volume, moles.clone());
+        let a = pt.helmholtz_energy(&state) / (moles[0] + moles[1]);
+        assert_relative_eq!(a, 3.8636904888563084, epsilon = 1e-10);
     }
 }

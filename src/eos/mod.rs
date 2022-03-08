@@ -109,6 +109,7 @@ impl EquationOfState for UVTheory {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::parameters::utils::{methane_parameters, test_parameters_mixture};
     use crate::parameters::*;
     use approx::assert_relative_eq;
     use feos_core::parameter::{BinaryRecord, Identifier, Parameter, PureRecord};
@@ -121,10 +122,41 @@ mod test {
         let eps_k = 150.03;
         let sig = 3.7039;
         let r = UVRecord::new(24.0, 6.0, sig, eps_k);
+        //let r = UVRecord::new(12.0, 6.0, sig, eps_k);
         let i = Identifier::new("1", None, None, None, None, None);
         let pr = PureRecord::new(i, 1.0, r, None);
         let parameters = UVParameters::new_pure(pr);
         let eos = Rc::new(UVTheory::new(Rc::new(parameters)));
+
+        let reduced_temperature = 4.0;
+        //let reduced_temperature = 1.0;
+        let reduced_density = 1.0;
+        //let reduced_density = 0.9;
+        let temperature = reduced_temperature * eps_k * KELVIN;
+        let moles = arr1(&vec![2.0]) * MOL;
+        let volume = (sig * ANGSTROM).powi(3) / reduced_density * NAV * 2.0 * MOL;
+        let s = State::new_nvt(&eos, temperature, volume, &moles).unwrap();
+        let a = s
+            .molar_helmholtz_energy(Contributions::Residual)
+            .to_reduced(RGAS * temperature)
+            .unwrap();
+        assert_relative_eq!(a, 2.972986567516, max_relative = 1e-12) //wca
+                                                                     //assert_relative_eq!(a, -7.0843443690046017, max_relative = 1e-12) // bh: assert_relative_eq!(a, 2.993577305779432, max_relative = 1e-12)
+    }
+    #[test]
+    fn helmholtz_energy_pure_bh() {
+        let eps_k = 150.03;
+        let sig = 3.7039;
+        let r = UVRecord::new(24.0, 6.0, sig, eps_k);
+        let i = Identifier::new("1", None, None, None, None, None);
+        let pr = PureRecord::new(i, 1.0, r, None);
+        let parameters = UVParameters::new_pure(pr);
+
+        let options = UVTheoryOptions {
+            max_eta: 0.5,
+            perturbation: Perturbation::BarkerHenderson,
+        };
+        let eos = Rc::new(UVTheory::with_options(Rc::new(parameters), options));
 
         let reduced_temperature = 4.0;
         let reduced_density = 1.0;
@@ -136,8 +168,87 @@ mod test {
             .molar_helmholtz_energy(Contributions::Residual)
             .to_reduced(RGAS * temperature)
             .unwrap();
-        assert_relative_eq!(a, 2.972986567516, max_relative = 1e-12) //wca
-                                                                     // bh: assert_relative_eq!(a, 2.993577305779432, max_relative = 1e-12)
+
+        assert_relative_eq!(a, 2.993577305779432, max_relative = 1e-12)
+    }
+
+    #[test]
+    fn helmholtz_energy_mixtures_bh() {
+        // Mixture of equal components --> result must be the same as fpr pure fluid ///
+        // component 1
+        let rep1 = 24.0;
+        let eps_k1 = 150.03;
+        let sig1 = 3.7039;
+        let r1 = UVRecord::new(rep1, 6.0, sig1, eps_k1);
+        let i = Identifier::new("1", None, None, None, None, None);
+        // compontent 2
+        let rep2 = 24.0;
+        let eps_k2 = 150.03;
+        let sig2 = 3.7039;
+        let r2 = UVRecord::new(rep2, 6.0, sig2, eps_k2);
+        let j = Identifier::new("2", None, None, None, None, None);
+        //////////////
+
+        let pr1 = PureRecord::new(i, 1.0, r1, None);
+        let pr2 = PureRecord::new(j, 1.0, r2, None);
+        let pure_records = vec![pr1, pr2];
+        let uv_parameters = UVParameters::new_binary(pure_records, None);
+        // state
+        let reduced_temperature = 4.0;
+        let eps_k_x = (eps_k1 + eps_k2) / 2.0; // Check rule!!
+        let t_x = reduced_temperature * eps_k_x * KELVIN;
+        let sig_x = (sig1 + sig2) / 2.0; // Check rule!!
+        let reduced_density = 1.0;
+        let moles = arr1(&vec![1.7, 0.3]) * MOL;
+        let total_moles = moles.sum();
+        let volume = (sig_x * ANGSTROM).powi(3) / reduced_density * NAV * total_moles;
+
+        // EoS
+        let options = UVTheoryOptions {
+            max_eta: 0.5,
+            perturbation: Perturbation::BarkerHenderson,
+        };
+
+        let eos_bh = Rc::new(UVTheory::with_options(Rc::new(uv_parameters), options));
+
+        let state_bh = State::new_nvt(&eos_bh, t_x, volume, &moles).unwrap();
+        let a_bh = state_bh
+            .molar_helmholtz_energy(Contributions::Residual)
+            .to_reduced(RGAS * t_x)
+            .unwrap();
+
+        assert_relative_eq!(a_bh, 2.993577305779432, max_relative = 1e-12);
+    }
+    #[test]
+    fn helmholtz_energy_wca_mixture() {
+        let p = test_parameters_mixture(
+            arr1(&[12.0, 12.0]),
+            arr1(&[6.0, 6.0]),
+            arr1(&[1.0, 1.0]),
+            arr1(&[1.0, 0.5]),
+        );
+
+        // state
+        let reduced_temperature = 1.0;
+        let t_x = reduced_temperature * p.epsilon_k[0] * KELVIN;
+        let reduced_density = 0.9;
+        let moles = arr1(&vec![0.4, 0.6]) * MOL;
+        let total_moles = moles.sum();
+        let volume = (p.sigma[0] * ANGSTROM).powi(3) / reduced_density * NAV * total_moles;
+
+        // EoS
+        let eos_wca = Rc::new(UVTheory::new(Rc::new(p)));
+        let state_wca = State::new_nvt(&eos_wca, t_x, volume, &moles).unwrap();
+        let a_wca = state_wca
+            .molar_helmholtz_energy(Contributions::Residual)
+            .to_reduced(RGAS * t_x)
+            .unwrap();
+
+        let a_contributions = state_wca.helmholtz_energy_contributions();
+
+        // dbg!(&a_contributions[1]);
+        // dbg!(&a_contributions[2]);
+        assert_relative_eq!(a_wca, -0.597791038364405, max_relative = 1e-5)
     }
     #[test]
     fn helmholtz_energy_pure_bh() {
