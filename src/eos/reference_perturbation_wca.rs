@@ -1,5 +1,9 @@
 use super::hard_sphere_wca::{
-    diameter_q_wca, diameter_wca, packing_fraction, packing_fraction_a, packing_fraction_b,
+    diameter_wca,
+    dimensionless_diameter_q_wca,
+    packing_fraction,
+    packing_fraction_a,
+    packing_fraction_b, //diameter_q_wca,
 };
 use crate::parameters::*;
 use feos_core::{HelmholtzEnergyDual, StateHD};
@@ -25,7 +29,7 @@ impl<D: DualNum<f64>> HelmholtzEnergyDual<D> for ReferencePerturbationWCA {
         let n = p.sigma.len();
         let x = &state.molefracs;
         let d = diameter_wca(&p, state.temperature);
-        let q = diameter_q_wca(&p, state.temperature);
+        //let q = diameter_q_wca(&p, state.temperature);
         let eta = packing_fraction(&state.partial_density, &d);
         let eta_a = packing_fraction_a(p, eta, state.temperature);
         let eta_b = packing_fraction_b(p, eta, state.temperature);
@@ -37,7 +41,12 @@ impl<D: DualNum<f64>> HelmholtzEnergyDual<D> for ReferencePerturbationWCA {
                     + (p.rep[j] / p.att[j]).powf(1.0 / (p.rep[j] - p.att[j])))
                     * 0.5; // MIXING RULE not clear!!!
                 let d_ij = (d[i] + d[j]) * 0.5; // (d[i] * p.sigma[i] + d[j] * p.sigma[j]) * 0.5;
-                let q_ij = (q[i] + q[j]) * 0.5;
+                                                //let q_ij = (q[i] + q[j]) * 0.5;
+                let t_ij = state.temperature / p.eps_k_ij[[i, j]];
+                let rep_ij = p.rep_ij[[i, j]];
+                let att_ij = p.att_ij[[i, j]];
+                let q_ij = dimensionless_diameter_q_wca(t_ij, D::from(rep_ij), D::from(att_ij))
+                    * p.sigma_ij[[i, j]];
 
                 a += x[i]
                     * x[j]
@@ -79,25 +88,23 @@ mod test {
     }
     #[test]
     fn test_delta_a0_wca_mixture() {
-        let moles = arr1(&[1.7, 0.3]);
-        let reduced_temperature = 4.0;
-        let reduced_density = 1.0;
+        let moles = arr1(&[0.40000000000000002, 0.59999999999999998]);
+        let reduced_temperature = 1.0;
+        let reduced_density = 0.90000000000000002;
         let reduced_volume = (moles[0] + moles[1]) / reduced_density;
 
         let p = test_parameters_mixture(
-            arr1(&[24.0, 24.0]),
+            arr1(&[12.0, 12.0]),
             arr1(&[6.0, 6.0]),
             arr1(&[1.0, 1.0]),
-            arr1(&[1.0, 1.0]),
+            arr1(&[1.0, 0.5]),
         );
-        let d = diameter_wca(&p, reduced_temperature);
-        let q = diameter_q_wca(&p, reduced_temperature);
 
         let pt = ReferencePerturbationWCA {
             parameters: Rc::new(p),
         };
         let state = StateHD::new(reduced_temperature, reduced_volume, moles.clone());
         let a = pt.helmholtz_energy(&state) / (moles[0] + moles[1]);
-        assert_relative_eq!(a, 0.258690311450425, epsilon = 1e-10);
+        assert_relative_eq!(a, 0.308268896386771, epsilon = 1e-6);
     }
 }
