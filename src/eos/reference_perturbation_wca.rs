@@ -41,12 +41,15 @@ impl<D: DualNum<f64>> HelmholtzEnergyDual<D> for ReferencePerturbationWCA {
                     + (p.rep[j] / p.att[j]).powf(1.0 / (p.rep[j] - p.att[j])))
                     * 0.5; // MIXING RULE not clear!!!
                 let d_ij = (d[i] + d[j]) * 0.5; // (d[i] * p.sigma[i] + d[j] * p.sigma[j]) * 0.5;
+
                                                 //let q_ij = (q[i] + q[j]) * 0.5;
                 let t_ij = state.temperature / p.eps_k_ij[[i, j]];
                 let rep_ij = p.rep_ij[[i, j]];
                 let att_ij = p.att_ij[[i, j]];
                 let q_ij = dimensionless_diameter_q_wca(t_ij, D::from(rep_ij), D::from(att_ij))
                     * p.sigma_ij[[i, j]];
+    
+
 
                 a += x[i]
                     * x[j]
@@ -88,6 +91,7 @@ mod test {
     }
     #[test]
     fn test_delta_a0_wca_mixture() {
+
         let moles = arr1(&[0.40000000000000002, 0.59999999999999998]);
         let reduced_temperature = 1.0;
         let reduced_density = 0.90000000000000002;
@@ -100,11 +104,14 @@ mod test {
             arr1(&[1.0, 0.5]),
         );
 
+
         let pt = ReferencePerturbationWCA {
             parameters: Rc::new(p),
         };
         let state = StateHD::new(reduced_temperature, reduced_volume, moles.clone());
         let a = pt.helmholtz_energy(&state) / (moles[0] + moles[1]);
+
         assert_relative_eq!(a, 0.308268896386771, epsilon = 1e-6);
+
     }
 }
