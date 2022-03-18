@@ -104,7 +104,7 @@ impl<D: DualNum<f64>> HelmholtzEnergyDual<D> for AttractivePerturbationWCA {
             u_fraction_wca(rep_x, density * (x * &p.sigma.mapv(|s| s.powi(3))).sum());
 
         let b21u = delta_b12u(t_x, mean_field_constant_x, weighted_sigma3_ij, q_vdw, rm_x);
-        let b2bar = residual_virial_coefficient(p, x, state.temperature, q_vdw, t_x);
+        let b2bar = residual_virial_coefficient(p, x, state.temperature);
 
         state.moles.sum() * (delta_a1u + (-u_fraction_wca + 1.0) * (b2bar - b21u) * density)
     }
@@ -192,15 +192,20 @@ fn one_fluid_properties<D: DualNum<f64>>(
     x: &Array1<D>,
     t: D,
 ) -> (D, D, D, D, D, D) {
-    let d = diameter_wca(p, t) / &p.sigma;
+
+    let d = diameter_wca(p, t);
+    // &p.sigma;
 
     let mut epsilon_k = D::zero();
     let mut weighted_sigma3_ij = D::zero();
     let mut rep = D::zero();
     let mut att = D::zero();
+    let mut d_x_3 = D::zero();
 
     for i in 0..p.ncomponents {
         let xi = x[i];
+
+        d_x_3 += x[i] * d[i].powi(3);
         for j in 0..p.ncomponents {
             let _y = xi * x[j] * p.sigma_ij[[i, j]].powi(3);
             weighted_sigma3_ij += _y;
@@ -210,12 +215,16 @@ fn one_fluid_properties<D: DualNum<f64>>(
             att += xi * x[j] * p.att_ij[[i, j]];
         }
     }
-    let dx = (x * &d.mapv(|v| v.powi(3))).sum().powf(1.0 / 3.0);
+
+    //let dx = (x * &d.mapv(|v| v.powi(3))).sum().powf(1.0 / 3.0);
+    let sigma_x = (x * &p.sigma.mapv(|v| v.powi(3))).sum().powf(1.0 / 3.0);
+    let dx = d_x_3.powf(1.0 / 3.0) / sigma_x;
+
 
     (
         rep,
         att,
-        (x * &p.sigma.mapv(|v| v.powi(3))).sum().powf(1.0 / 3.0),
+        sigma_x,
         weighted_sigma3_ij,
         epsilon_k / weighted_sigma3_ij,
         dx,
@@ -323,7 +332,6 @@ mod test {
         let rm_x = (rep_x / att_x).powd((rep_x - att_x).recip());
         let mean_field_constant_x = mean_field_constant(rep_x, att_x, rm_x);
         dbg!(t_x);
-
         let q_vdw = dimensionless_diameter_q_wca(t_x, rep_x, att_x);
         let b21u = delta_b12u(t_x, mean_field_constant_x, weighted_sigma3_ij, q_vdw, rm_x)
             / p.sigma[0].powi(3);
@@ -392,6 +400,9 @@ mod test {
         let rm_x = (rep_x / att_x).powd((rep_x - att_x).recip());
         let mean_field_constant_x = mean_field_constant(rep_x, att_x, rm_x);
         let t_x = state.temperature / epsilon_k_x;
+      
+        dbg!(t_x.re());
+
         let q_vdw = dimensionless_diameter_q_wca(t_x, rep_x, att_x);
         dbg!(q_vdw.re());
         let delta_b21u = delta_b12u(t_x, mean_field_constant_x, weighted_sigma3_ij, q_vdw, rm_x);
@@ -414,9 +425,10 @@ mod test {
         assert_relative_eq!(delta_a1u, -4.7678301069070645, epsilon = 1e-6);
 
         // Second virial coefficient
-        let delta_b2 =
-            residual_virial_coefficient(&p, &state.molefracs, state.temperature, q_vdw, t_x)
-                / p.sigma[0].powi(3);
+
+        let delta_b2 = residual_virial_coefficient(&p, &state.molefracs, state.temperature)
+            / p.sigma[0].powi(3);
+
         dbg!(delta_b2);
         assert_relative_eq!(delta_b2, -4.7846399638747954, epsilon = 1e-6);
         // Full attractive contribution
@@ -428,4 +440,70 @@ mod test {
 
         assert_relative_eq!(a, -4.7697504236074844, epsilon = 1e-5);
     }
+
+
+    #[test]
+    fn test_attractive_perturbation_wca_mixture_different_sigma() {
+        let moles = arr1(&[0.40000000000000002, 0.59999999999999998]);
+        let reduced_temperature = 1.5;
+        let density = 0.10000000000000001;
+        let volume = 1.0 / density;
+        let p = test_parameters_mixture(
+            arr1(&[12.0, 12.0]),
+            arr1(&[6.0, 6.0]),
+            arr1(&[1.0, 2.0]),
+            arr1(&[1.0, 0.5]),
+        );
+
+        let state = StateHD::new(reduced_temperature, volume, moles.clone());
+        let (rep_x, att_x, sigma_x, weighted_sigma3_ij, epsilon_k_x, d_x) =
+            one_fluid_properties(&p, &state.molefracs, state.temperature);
+        // u-fraction
+        let density = state.partial_density.sum();
+        let x = &state.molefracs;
+        let phi_u = u_fraction_wca(rep_x, density * (x * &p.sigma.mapv(|s| s.powi(3))).sum());
+        assert_relative_eq!(phi_u, 0.89210738762113795, epsilon = 1e-5);
+        // delta b2
+
+        let b2bar = residual_virial_coefficient(&p, x, state.temperature) / p.sigma[0].powi(3);
+        assert_relative_eq!(b2bar.re(), -12.106977583257606, epsilon = 1e-12);
+
+        //delta b21u
+        let rm_x = (rep_x / att_x).powd((rep_x - att_x).recip());
+        let mean_field_constant_x = mean_field_constant(rep_x, att_x, rm_x);
+        let t_x = state.temperature / epsilon_k_x;
+        let q_vdw = dimensionless_diameter_q_wca(t_x, rep_x, att_x);
+        let delta_b21u = delta_b12u(t_x, mean_field_constant_x, weighted_sigma3_ij, q_vdw, rm_x);
+        assert_relative_eq!(delta_b21u, -10.841841323394299, epsilon = 1e-6);
+
+        let a_ufrac = (-phi_u + 1.0) * (b2bar - delta_b21u) * density;
+        assert_relative_eq!(a_ufrac, -0.0136498856091876, epsilon = 1e-6);
+        // delta b20
+        dbg!(d_x.re());
+
+        // delta a1u
+        let rho_x = state.partial_density.sum() * sigma_x.powi(3);
+        assert_relative_eq!(d_x, 0.95196953178057431, epsilon = 1e-6);
+
+        let i_wca =
+            correlation_integral_wca(rho_x, mean_field_constant_x, rep_x, att_x, d_x, q_vdw, rm_x);
+        dbg!(weighted_sigma3_ij.re());
+        dbg!(epsilon_k_x);
+        let delta_a1u = state.partial_density.sum() / state.temperature
+            * i_wca
+            * 2.0
+            * PI
+            * weighted_sigma3_ij
+            * epsilon_k_x;
+
+        assert_relative_eq!(delta_a1u, -1.3182160310774731, epsilon = 1e-6);
+
+        // Full attractive contribution
+        let pt = AttractivePerturbationWCA {
+            parameters: Rc::new(p),
+        };
+        let a = pt.helmholtz_energy(&state) / (moles[0] + moles[1]);
+        assert_relative_eq!(a, -1.3318659166866607, epsilon = 1e-5);
+    }
+
 }

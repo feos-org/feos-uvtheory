@@ -1,9 +1,8 @@
 use super::hard_sphere_wca::{
-    diameter_wca,
-    dimensionless_diameter_q_wca,
-    packing_fraction,
-    packing_fraction_a,
-    packing_fraction_b, //diameter_q_wca,
+
+    diameter_wca, dimensionless_diameter_q_wca, packing_fraction, packing_fraction_a,
+    packing_fraction_b,
+
 };
 use crate::parameters::*;
 use feos_core::{HelmholtzEnergyDual, StateHD};
@@ -42,13 +41,11 @@ impl<D: DualNum<f64>> HelmholtzEnergyDual<D> for ReferencePerturbationWCA {
                     * 0.5; // MIXING RULE not clear!!!
                 let d_ij = (d[i] + d[j]) * 0.5; // (d[i] * p.sigma[i] + d[j] * p.sigma[j]) * 0.5;
 
-                                                //let q_ij = (q[i] + q[j]) * 0.5;
                 let t_ij = state.temperature / p.eps_k_ij[[i, j]];
                 let rep_ij = p.rep_ij[[i, j]];
                 let att_ij = p.att_ij[[i, j]];
                 let q_ij = dimensionless_diameter_q_wca(t_ij, D::from(rep_ij), D::from(att_ij))
                     * p.sigma_ij[[i, j]];
-    
 
 
                 a += x[i]
@@ -103,7 +100,6 @@ mod test {
             arr1(&[1.0, 1.0]),
             arr1(&[1.0, 0.5]),
         );
-
 
         let pt = ReferencePerturbationWCA {
             parameters: Rc::new(p),
