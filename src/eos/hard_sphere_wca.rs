@@ -201,8 +201,6 @@ pub fn packing_fraction_b<D: DualNum<f64>>(
     let n = parameters.att.len();
     let dimensionless_lengths = dimensionless_length_scale(parameters, temperature);
     Array2::from_shape_fn((n, n), |(i, j)| {
-        let temp_ij = temperature / parameters.eps_k_ij[[i, j]];
-
         let tau = (dimensionless_lengths[i] + dimensionless_lengths[j])
             / parameters.sigma_ij[[i, j]]
             * 0.5; //dimensionless
