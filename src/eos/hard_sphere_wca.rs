@@ -75,6 +75,7 @@ pub fn diameter_wca<D: DualNum<f64>>(parameters: &UVParameters, temperature: D) 
             let c = (parameters.rep[i] / 6.0)
                 .powf(-parameters.rep[i] / (12.0 - 2.0 * parameters.rep[i]))
                 - 1.0;
+
             (((t.sqrt() * c + 1.0).powf(2.0 / parameters.rep[i])).recip() * rm)
                 * parameters.sigma[i]
         })
@@ -184,10 +185,13 @@ pub fn dimensionless_length_scale<D: DualNum<f64>>(
         .map(|(i, _c)| {
             let rs = (parameters.rep[i] / parameters.att[i])
                 .powf(1.0 / (parameters.rep[i] - parameters.att[i]));
-            -diameter_wca(parameters, temperature)[i] / parameters.sigma[i] + rs
+            -diameter_wca(parameters, temperature)[i] + rs * parameters.sigma[i]
+            // parameters.sigma[i]
         })
         .collect()
 }
+
+#[inline]
 
 pub fn packing_fraction_b<D: DualNum<f64>>(
     parameters: &UVParameters,
@@ -197,8 +201,13 @@ pub fn packing_fraction_b<D: DualNum<f64>>(
     let n = parameters.att.len();
     let dimensionless_lengths = dimensionless_length_scale(parameters, temperature);
     Array2::from_shape_fn((n, n), |(i, j)| {
-        let tau = (dimensionless_lengths[i] + dimensionless_lengths[j]) * 0.5; //dimensionless
+        let temp_ij = temperature / parameters.eps_k_ij[[i, j]];
+
+        let tau = (dimensionless_lengths[i] + dimensionless_lengths[j])
+            / parameters.sigma_ij[[i, j]]
+            * 0.5; //dimensionless
         let tau2 = tau * tau;
+
         let c = arr1(&[
             tau * WCA_CONSTANTS_ETA_B[[0, 0]] + tau2 * WCA_CONSTANTS_ETA_B[[0, 1]],
             tau * WCA_CONSTANTS_ETA_B[[1, 0]] + tau2 * WCA_CONSTANTS_ETA_B[[1, 1]],
@@ -216,7 +225,10 @@ pub fn packing_fraction_a<D: DualNum<f64>>(
     let dimensionless_lengths = dimensionless_length_scale(parameters, temperature);
     let n = parameters.att.len();
     Array2::from_shape_fn((n, n), |(i, j)| {
-        let tau = (dimensionless_lengths[i] + dimensionless_lengths[j]) * 0.5; //dimensionless
+        let tau = (dimensionless_lengths[i] + dimensionless_lengths[j])
+            / parameters.sigma_ij[[i, j]]
+            * 0.5; //dimensionless
+
         let tau2 = tau * tau;
         let rep_inv = 1.0 / parameters.rep_ij[[i, j]];
         let c = arr1(&[
@@ -251,6 +263,11 @@ mod test {
             diameter_wca(&p, 4.0 * p.epsilon_k[0])[0] / p.sigma[0],
             0.9614325601663462
         );
+        assert_eq!(
+            diameter_wca(&p, 4.0 * p.epsilon_k[0])[0] / p.sigma[0],
+            0.9614325601663462
+        );
+
         assert_relative_eq!(
             dimensionless_diameter_q_wca(temp, p.rep[0], p.att[0]),
             0.9751576149023506,
@@ -258,7 +275,7 @@ mod test {
         );
 
         assert_relative_eq!(
-            dimensionless_length_scale(&p, 4.0 * p.epsilon_k[0])[0],
+            dimensionless_length_scale(&p, 4.0 * p.epsilon_k[0])[0] / p.sigma[0],
             0.11862717872596029,
             epsilon = 1e-8
         );

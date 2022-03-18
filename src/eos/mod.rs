@@ -109,10 +109,10 @@ impl EquationOfState for UVTheory {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::parameters::utils::{methane_parameters, test_parameters_mixture};
+    use crate::parameters::utils::test_parameters_mixture;
     use crate::parameters::*;
     use approx::assert_relative_eq;
-    use feos_core::parameter::{BinaryRecord, Identifier, Parameter, PureRecord};
+    use feos_core::parameter::{Identifier, Parameter, PureRecord};
     use feos_core::{Contributions, State};
     use ndarray::arr1;
     use quantity::si::{ANGSTROM, KELVIN, MOL, NAV, RGAS};
@@ -244,10 +244,38 @@ mod test {
             .to_reduced(RGAS * t_x)
             .unwrap();
 
-        let a_contributions = state_wca.helmholtz_energy_contributions();
+        assert_relative_eq!(a_wca, -0.597791038364405, max_relative = 1e-5)
+    }
+
+    #[test]
+    fn helmholtz_energy_wca_mixture_different_sigma() {
+        let p = test_parameters_mixture(
+            arr1(&[12.0, 12.0]),
+            arr1(&[6.0, 6.0]),
+            arr1(&[1.0, 2.0]),
+            arr1(&[1.0, 0.5]),
+        );
+
+        // state
+        let reduced_temperature = 1.5;
+        let t_x = reduced_temperature * p.epsilon_k[0] * KELVIN;
+        let sigma_x_3 = (0.4 + 0.6 * 8.0) * ANGSTROM.powi(3);
+        let density = 0.52000000000000002 / sigma_x_3;
+        let moles = arr1(&vec![0.4, 0.6]) * MOL;
+        let total_moles = moles.sum();
+        let volume = NAV * total_moles / density;
+
+        // EoS
+        let eos_wca = Rc::new(UVTheory::new(Rc::new(p)));
+        let state_wca = State::new_nvt(&eos_wca, t_x, volume, &moles).unwrap();
+        let a_wca = state_wca
+            .molar_helmholtz_energy(Contributions::Residual)
+            .to_reduced(RGAS * t_x)
+            .unwrap();
 
         // dbg!(&a_contributions[1]);
         // dbg!(&a_contributions[2]);
-        assert_relative_eq!(a_wca, -0.597791038364405, max_relative = 1e-5)
+        // dbg!(&a_contributions[3]);
+        assert_relative_eq!(a_wca, -0.034206207, max_relative = 1e-5)
     }
 }
