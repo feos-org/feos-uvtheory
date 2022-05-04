@@ -16,13 +16,15 @@ use hard_sphere_bh::HardSphere;
 use hard_sphere_wca::HardSphereWCA;
 use reference_perturbation_bh::ReferencePerturbationBH;
 use reference_perturbation_wca::ReferencePerturbationWCA;
-#[derive(Copy, Clone)]
+
+#[derive(Clone)]
+#[cfg_attr(feature = "python", pyo3::pyclass)]
 pub enum Perturbation {
     BarkerHenderson,
     WeeksChandlerAndersen,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct UVTheoryOptions {
     pub max_eta: f64,
     pub perturbation: Perturbation,
@@ -92,7 +94,7 @@ impl EquationOfState for UVTheory {
     fn subset(&self, component_list: &[usize]) -> Self {
         Self::with_options(
             Rc::new(self.parameters.subset(component_list)),
-            self.options,
+            self.options.clone(),
         )
     }
 
@@ -114,7 +116,7 @@ mod test {
 
     use crate::parameters::*;
     use approx::assert_relative_eq;
-    use feos_core::parameter::{BinaryRecord, Identifier, Parameter, PureRecord};
+    use feos_core::parameter::{Identifier, Parameter, PureRecord};
     use feos_core::{Contributions, State};
     use ndarray::arr1;
     use quantity::si::{ANGSTROM, KELVIN, MOL, NAV, RGAS};
@@ -139,7 +141,7 @@ mod test {
         let volume = (sig * ANGSTROM).powi(3) / reduced_density * NAV * 2.0 * MOL;
         let s = State::new_nvt(&eos, temperature, volume, &moles).unwrap();
         let a = s
-            .molar_helmholtz_energy(Contributions::Residual)
+            .molar_helmholtz_energy(Contributions::ResidualNvt)
             .to_reduced(RGAS * temperature)
             .unwrap();
         assert_relative_eq!(a, 2.972986567516, max_relative = 1e-12) //wca
@@ -167,7 +169,7 @@ mod test {
         let volume = (sig * ANGSTROM).powi(3) / reduced_density * NAV * 2.0 * MOL;
         let s = State::new_nvt(&eos, temperature, volume, &moles).unwrap();
         let a = s
-            .molar_helmholtz_energy(Contributions::Residual)
+            .molar_helmholtz_energy(Contributions::ResidualNvt)
             .to_reduced(RGAS * temperature)
             .unwrap();
 
@@ -215,7 +217,7 @@ mod test {
 
         let state_bh = State::new_nvt(&eos_bh, t_x, volume, &moles).unwrap();
         let a_bh = state_bh
-            .molar_helmholtz_energy(Contributions::Residual)
+            .molar_helmholtz_energy(Contributions::ResidualNvt)
             .to_reduced(RGAS * t_x)
             .unwrap();
 
@@ -242,7 +244,7 @@ mod test {
         let eos_wca = Rc::new(UVTheory::new(Rc::new(p)));
         let state_wca = State::new_nvt(&eos_wca, t_x, volume, &moles).unwrap();
         let a_wca = state_wca
-            .molar_helmholtz_energy(Contributions::Residual)
+            .molar_helmholtz_energy(Contributions::ResidualNvt)
             .to_reduced(RGAS * t_x)
             .unwrap();
 
@@ -271,7 +273,7 @@ mod test {
         let eos_wca = Rc::new(UVTheory::new(Rc::new(p)));
         let state_wca = State::new_nvt(&eos_wca, t_x, volume, &moles).unwrap();
         let a_wca = state_wca
-            .molar_helmholtz_energy(Contributions::Residual)
+            .molar_helmholtz_energy(Contributions::ResidualNvt)
             .to_reduced(RGAS * t_x)
             .unwrap();
         assert_relative_eq!(a_wca, -0.034206207363139396, max_relative = 1e-5)

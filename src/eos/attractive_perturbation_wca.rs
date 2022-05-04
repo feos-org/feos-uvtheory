@@ -1,7 +1,6 @@
 use super::hard_sphere_wca::{diameter_wca, dimensionless_diameter_q_wca};
 use crate::parameters::*;
 use feos_core::{HelmholtzEnergyDual, StateHD};
-use ndarray::prelude::*;
 use ndarray::Array1;
 use num_dual::DualNum;
 use std::{f64::consts::PI, fmt, rc::Rc};
