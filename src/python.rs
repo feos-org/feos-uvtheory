@@ -1,10 +1,6 @@
 use crate::parameters::{NoRecord, UVBinaryRecord, UVParameters, UVRecord};
-use feos_core::parameter::{
-    Identifier, IdentifierOption, Parameter, ParameterError, PureRecord, SegmentRecord,
-};
-use feos_core::python::parameter::{
-    PyBinaryRecord, PyBinarySegmentRecord, PyChemicalRecord, PyIdentifier,
-};
+use feos_core::parameter::{Identifier, IdentifierOption, Parameter, ParameterError, PureRecord};
+use feos_core::python::parameter::PyIdentifier;
 use feos_core::*;
 use ndarray::Array2;
 use numpy::PyArray2;
@@ -29,10 +25,7 @@ impl PyUVRecord {
     fn new(rep: f64, att: f64, sigma: f64, epsilon_k: f64) -> Self {
         Self(UVRecord::new(rep, att, sigma, epsilon_k))
     }
-}
 
-#[pyproto]
-impl pyo3::class::basic::PyObjectProtocol for PyUVRecord {
     fn __repr__(&self) -> PyResult<String> {
         Ok(self.0.to_string())
     }

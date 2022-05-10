@@ -233,11 +233,9 @@ fn bh_coefficients(rep: f64, att: f64) -> Array1<f64> {
 }
 
 pub mod utils {
-    use std::f64;
-
-    use feos_core::parameter::{Identifier, PureRecord};
-
     use super::*;
+    use feos_core::parameter::{Identifier, PureRecord};
+    use std::f64;
 
     pub fn test_parameters(rep: f64, att: f64, sigma: f64, epsilon: f64) -> UVParameters {
         let identifier = Identifier::new("1", None, None, None, None, None);
@@ -270,14 +268,3 @@ pub mod utils {
         UVParameters::new_pure(pr)
     }
 }
-
-// #[cfg(test)]
-// mod test {
-//     use super::*;
-
-//     #[test]
-//     fn test_mie_prefactor() {
-//         let p = mie_prefactor(12.0, 6.0);
-//         assert_eq!(p, 4.0);
-//     }
-// }
