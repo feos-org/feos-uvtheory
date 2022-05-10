@@ -232,6 +232,7 @@ fn bh_coefficients(rep: f64, att: f64) -> Array1<f64> {
     concatenate![Axis(0), c0, CD_BH.dot(&arr1(&[1.0, alpha, alpha * alpha]))]
 }
 
+#[cfg(test)]
 pub mod utils {
     use super::*;
     use feos_core::parameter::{Identifier, PureRecord};
