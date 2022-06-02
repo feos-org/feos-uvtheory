@@ -8,7 +8,7 @@ authors = [
 ]
 edition = "2018"
 license = "MIT OR Apache-2.0"
-description = "Implementation of PC-SAFT EoS and corresponding Helmholtz energy functional."
+description = "Implementation of uv-theory and corresponding Helmholtz energy functional."
 homepage = "https://github.com/feos-org"
 readme = "README.md"
 repository = "https://github.com/feos-org/feos-uvtheory"
